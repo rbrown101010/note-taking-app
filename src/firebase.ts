@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc } from "firebase/firestore";
+import { Note, Category } from "./types";
 
 const firebaseConfig = {
   apiKey: "AIzaSyC16WTtbRDTpXCZXhAeCcHzLkRvAaFODd4",
@@ -13,3 +14,34 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
+
+export const addNote = async (note: Omit<Note, 'id'>) => {
+  const docRef = await addDoc(collection(db, "notes"), note);
+  return { id: docRef.id, ...note } as Note;
+};
+
+export const updateNote = async (id: string, note: Partial<Note>) => {
+  await updateDoc(doc(db, "notes", id), note);
+};
+
+export const deleteNote = async (id: string) => {
+  await deleteDoc(doc(db, "notes", id));
+};
+
+export const addCategory = async (category: Omit<Category, 'id'>) => {
+  const docRef = await addDoc(collection(db, "categories"), category);
+  return { id: docRef.id, ...category } as Category;
+};
+
+export const updateCategory = async (id: string, category: Partial<Category>) => {
+  await updateDoc(doc(db, "categories", id), category);
+};
+
+export const deleteCategory = async (id: string) => {
+  await deleteDoc(doc(db, "categories", id));
+};
+
+export const addVoiceNote = async (note: Omit<Note, 'id'>) => {
+  const voiceNote = { ...note, isVoiceNote: true };
+  return addNote(voiceNote);
+};

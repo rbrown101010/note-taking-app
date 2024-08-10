@@ -5,17 +5,48 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=EB+Garamond&family=Libre+Baskerville&display=swap" rel="stylesheet">
     <title>React + TypeScript + Replit</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+          sans-serif;
+      }
+      @font-face {
+        font-family: 'Futura';
+        src: url('https://fonts.cdnfonts.com/css/futura-pt') format('woff2');
+      }
+      @font-face {
+        font-family: 'Gill Sans';
+        src: url('https://fonts.cdnfonts.com/css/gill-sans') format('woff2');
+      }
+      @font-face {
+        font-family: 'Palatino';
+        src: url('https://fonts.cdnfonts.com/css/palatino') format('woff2');
+      }
+      .ql-editor {
+        padding: 20px;
+        line-height: 1.6;
+      }
+      .ql-editor p {
+        margin-bottom: 1em;
+      }
+      .ql-snow .ql-toolbar {
+        border-top-left-radius: 8px;
+        border-top-right-radius: 8px;
+        border-color: #e2e8f0;
+      }
+      .ql-container.ql-snow {
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        border-color: #e2e8f0;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/src/index.tsx"></script>
-		
-    <!--
-    This script places a badge on your repl's full-browser view back to your repl's cover
-    page. Try various colors for the theme: dark, light, red, orange, yellow, lime, green,
-    teal, blue, blurple, magenta, pink!
-    -->
     <script src="https://replit.com/public/js/replit-badge-v2.js" theme="dark" position="bottom-right"></script>
   </body>
 </html>

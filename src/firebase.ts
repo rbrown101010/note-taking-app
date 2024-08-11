@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, setDoc, getDoc, Timestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, setDoc, getDoc, Timestamp, query, where, getDocs } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
-import { Note, Category } from "./types";
+import { Note, Topic } from "./types";
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -47,19 +47,8 @@ export const signInWithGoogle = async () => {
     await createUserDocument(user);
     return user;
   } catch (error) {
-    if (error.code === 'auth/cancelled-popup-request') {
-      console.log("Google Sign-In was cancelled by the user");
-      throw new Error("Sign-in cancelled. Please try again.");
-    } else if (error.code === 'auth/popup-closed-by-user') {
-      console.log("Google Sign-In popup was closed by the user");
-      throw new Error("Sign-in popup closed. Please try again.");
-    } else if (error.code === 'auth/popup-blocked') {
-      console.log("Google Sign-In popup was blocked");
-      throw new Error("Sign-in popup was blocked. Please allow popups for this site and try again.");
-    } else {
-      console.error("Error signing in with Google", error);
-      throw new Error("An error occurred during sign-in. Please try again.");
-    }
+    console.error("Error signing in with Google:", error);
+    throw error;
   }
 };
 
@@ -89,7 +78,7 @@ export const createUserDocument = async (user: User) => {
         createdAt: Timestamp.now(),
         lastLoginAt: Timestamp.now(),
       });
-      await initializeDefaultCategories(user.uid);
+      await initializeDefaultTopics(user.uid);
     } catch (error) {
       console.error("Error creating user document", error);
     }
@@ -100,33 +89,53 @@ export const createUserDocument = async (user: User) => {
   }
 };
 
-export const addCategory = async (category: Omit<Category, 'id'>, userId: string) => {
+export const initializeDefaultTopics = async (userId: string) => {
+  const defaultTopics = [
+    { name: "No Topic", color: "bg-gray-200", isDefault: true, order: 1000 },
+    { name: "Voice Notes", color: "bg-blue-200", isDefault: true, order: 1001 }
+  ];
+
+  for (const topic of defaultTopics) {
+    const topicQuery = query(
+      collection(db, `users/${userId}/topics`),
+      where("name", "==", topic.name),
+      where("isDefault", "==", true)
+    );
+    const topicSnapshot = await getDocs(topicQuery);
+
+    if (topicSnapshot.empty) {
+      await addTopic({ ...topic, userId }, userId);
+    }
+  }
+};
+
+export const addTopic = async (topic: Omit<Topic, 'id'>, userId: string) => {
   try {
-    const docRef = await addDoc(collection(db, `users/${userId}/categories`), {
-      ...category,
-      parentId: category.parentId || null
-    });
-    return { id: docRef.id, ...category } as Category;
+    const docRef = await addDoc(collection(db, `users/${userId}/topics`), topic);
+    return { id: docRef.id, ...topic } as Topic;
   } catch (error) {
-    console.error("Error adding category:", error);
+    console.error("Error adding topic:", error);
     throw error;
   }
 };
 
-export const updateCategory = async (id: string, category: Partial<Category>, userId: string) => {
+export const updateTopic = async (id: string, topicUpdates: Partial<Topic>, userId: string) => {
   try {
-    await updateDoc(doc(db, `users/${userId}/categories`, id), category);
+    const topicRef = doc(db, `users/${userId}/topics`, id);
+    await updateDoc(topicRef, topicUpdates);
+    console.log("Topic updated successfully");
+    return { id, ...topicUpdates };
   } catch (error) {
-    console.error("Error updating category:", error);
+    console.error("Error updating topic:", error);
     throw error;
   }
 };
 
-export const deleteCategory = async (id: string, userId: string) => {
+export const deleteTopic = async (id: string, userId: string) => {
   try {
-    await deleteDoc(doc(db, `users/${userId}/categories`, id));
+    await deleteDoc(doc(db, `users/${userId}/topics`, id));
   } catch (error) {
-    console.error("Error deleting category:", error);
+    console.error("Error deleting topic:", error);
     throw error;
   }
 };
@@ -135,8 +144,8 @@ export const addNote = async (note: Omit<Note, 'id'>, userId: string) => {
   try {
     const noteToAdd = {
       ...note,
-      createdAt: Timestamp.fromDate(note.createdAt || new Date()),
-      updatedAt: Timestamp.fromDate(note.updatedAt || new Date())
+      createdAt: Timestamp.fromDate(note.createdAt),
+      updatedAt: Timestamp.fromDate(note.updatedAt)
     };
     const docRef = await addDoc(collection(db, `users/${userId}/notes`), noteToAdd);
     return { id: docRef.id, ...note } as Note;
@@ -176,17 +185,6 @@ export const addVoiceNote = async (note: Omit<Note, 'id'>, userId: string) => {
     updatedAt: new Date()
   };
   return addNote(voiceNote, userId);
-};
-
-export const initializeDefaultCategories = async (userId: string) => {
-  const defaultCategories = [
-    { name: "Uncategorized", color: "bg-gray-200", parentId: null },
-    { name: "Voice Notes", color: "bg-blue-200", parentId: null }
-  ];
-
-  for (const category of defaultCategories) {
-    await addCategory(category, userId);
-  }
 };
 
 export default app;

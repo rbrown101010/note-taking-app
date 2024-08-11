@@ -1,20 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { updateDoc, doc, deleteDoc } from "firebase/firestore";
 import { db } from '../firebase';
-import { Note, Category, User } from '../types';
+import { Note, Topic, User } from '../types';
 import { sortNotesByDate } from '../utils';
 import AIChat from './AIChat';
 
 interface NoteEditorProps {
   notes: Note[];
-  categories: Category[];
+  topics: Topic[];
   editingNote: Note | null;
   setEditingNote: React.Dispatch<React.SetStateAction<Note | null>>;
-  selectedCategory: string;
+  selectedTopic: string;
   user: User;
 }
 
-const NoteEditor: React.FC<NoteEditorProps> = ({ notes, categories, editingNote, setEditingNote, selectedCategory, user }) => {
+const NoteEditor: React.FC<NoteEditorProps> = ({ notes, topics, editingNote, setEditingNote, selectedTopic, user }) => {
   const [localEditingNote, setLocalEditingNote] = useState<Note | null>(null);
   const [sortedNotes, setSortedNotes] = useState<Note[]>([]);
 
@@ -76,13 +76,13 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ notes, categories, editingNote,
               />
               <div className="flex items-center">
                 <select
-                  value={localEditingNote.categoryId}
-                  onChange={(e) => setLocalEditingNote({...localEditingNote, categoryId: e.target.value})}
+                  value={localEditingNote.topicId}
+                  onChange={(e) => setLocalEditingNote({...localEditingNote, topicId: e.target.value})}
                   className="mr-4 border rounded px-2 py-1 bg-gray-700 text-white"
                 >
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
+                  {topics.map(topic => (
+                    <option key={topic.id} value={topic.id}>
+                      {topic.name}
                     </option>
                   ))}
                 </select>
@@ -105,16 +105,16 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ notes, categories, editingNote,
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedNotes.map((note) => {
-            const category = categories.find(c => c.id === note.categoryId);
+            const topic = topics.find(t => t.id === note.topicId);
             return (
               <div 
                 key={note.id}
-                className={`${category?.color || 'bg-gray-800'} p-6 rounded-lg shadow-lg cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-xl relative overflow-hidden`}
+                className={`${topic?.color || 'bg-gray-800'} p-6 rounded-lg shadow-lg cursor-pointer transform transition-all duration-200 hover:scale-105 hover:shadow-xl relative overflow-hidden`}
                 onClick={() => handleNoteClick(note)}
               >
                 <h3 className="font-bold mb-2 text-xl text-gray-900">{note.title}</h3>
                 <div className="text-sm text-gray-800 line-clamp-3" dangerouslySetInnerHTML={{ __html: note.content }} />
-                <div className="mt-4 text-xs text-gray-700">{category?.name}</div>
+                <div className="mt-4 text-xs text-gray-700">{topic?.name}</div>
                 <div className="mt-1 text-xs text-gray-600">
                   Updated: {note.updatedAt.toLocaleString()}
                 </div>

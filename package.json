@@ -33,6 +33,7 @@
     "react-dom": "^18.2.0",
     "react-markdown": "^9.0.1",
     "react-quill": "^2.0.0",
+    "react-router-dom": "^6.26.0",
     "uuid": "^10.0.0"
   }
 }

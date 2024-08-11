@@ -1,5 +1,3 @@
-// types.ts
-
 export interface User {
   id: string;
   email: string;
@@ -8,20 +6,21 @@ export interface User {
   lastLoginAt: Date;
 }
 
-export interface Category {
+export interface Topic {
   id: string;
   name: string;
   color: string;
-  parentId: string | null;
-  userId: string; // Add this line to associate categories with users
+  userId: string;
+  isDefault: boolean;
+  order: number;
 }
 
 export interface Note {
   id: string;
   title: string;
   content: string;
-  categoryId: string;
-  userId: string; // Add this line to associate notes with users
+  topicId: string;
+  userId: string;
   completed?: boolean;
   tags: string[];
   isVoiceNote?: boolean;
@@ -35,29 +34,29 @@ export interface VoiceNoteMetadata {
   transcriptionStatus: 'pending' | 'completed' | 'failed';
 }
 
-// You might want to add interfaces for AI responses if you're using them in your TypeScript code
 export interface AIResponse {
   response: string;
 }
 
-// If you're using any specific props types for your components, you can define them here as well
 export interface NoteEditorProps {
   notes: Note[];
-  categories: Category[];
+  topics: Topic[];
   editingNote: Note | null;
   setEditingNote: React.Dispatch<React.SetStateAction<Note | null>>;
-  selectedCategory: string;
+  selectedTopic: string;
   user: User;
 }
 
 export interface SidebarProps {
-  categories: Category[];
+  topics: Topic[];
   notes: Note[];
-  selectedCategory: string;
-  setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
+  selectedTopic: string;
+  setSelectedTopic: React.Dispatch<React.SetStateAction<string>>;
   selectedTag: string | null;
   setSelectedTag: React.Dispatch<React.SetStateAction<string | null>>;
+  onVoiceRecordClick: () => void;
   user: User;
+  onSignOut: () => void;
 }
 
 export interface AuthComponentProps {
@@ -65,10 +64,11 @@ export interface AuthComponentProps {
 }
 
 export interface VoiceRecorderProps {
-  categories: Category[];
+  topics: Topic[];
   onNoteCreated: (note: Note) => void;
   onClose: () => void;
-  user: User;
+  userId: string;
+  autoStart: boolean;
 }
 
 export interface AIChatProps {

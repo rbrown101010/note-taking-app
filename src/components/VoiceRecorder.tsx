@@ -2,19 +2,19 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { StopCircle, Loader, X } from 'lucide-react';
 import { addVoiceNote } from '../firebase';
-import { Category, Note } from '../types';
+import { Topic, Note } from '../types';
 
 const BACKEND_URL = 'https://new-backend-rileybrown24.replit.app';
 
 interface VoiceRecorderProps {
-  categories: Category[];
+  topics: Topic[];
   onNoteCreated: (note: Note) => void;
   onClose: () => void;
   userId: string;
   autoStart: boolean;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ categories, onNoteCreated, onClose, userId, autoStart }) => {
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ topics, onNoteCreated, onClose, userId, autoStart }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -93,15 +93,15 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ categories, onNoteCreated
 
       const transcription = response.data.transcription;
 
-      let voiceNoteCategory = categories.find(c => c.name === "Voice Notes");
-      if (!voiceNoteCategory) {
-        throw new Error("Voice Notes category not found");
+      let voiceNoteTopic = topics.find(t => t.name === "Voice Notes");
+      if (!voiceNoteTopic) {
+        throw new Error("Voice Notes topic not found");
       }
 
       const newNote: Omit<Note, 'id'> = {
         title: `Voice Note ${new Date().toLocaleString()}`,
         content: transcription,
-        categoryId: voiceNoteCategory.id,
+        topicId: voiceNoteTopic.id,
         tags: ["voice"],
         completed: false,
         isVoiceNote: true,
@@ -199,9 +199,9 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ categories, onNoteCreated
           height={100}
           className="w-full"
         />
-        </div>
-        </div>
-        );
-        };
+      </div>
+    </div>
+  );
+};
 
-        export default VoiceRecorder;
+export default VoiceRecorder;

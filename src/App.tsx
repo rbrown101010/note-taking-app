@@ -1,74 +1,48 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query } from "firebase/firestore";
-import { db } from './firebase';
-import NoteEditor from './components/NoteEditor';
-import Sidebar from './components/Sidebar';
-import { Note, Category } from './types';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import 'react-calendar/dist/Calendar.css';
+import { auth } from './firebase';
+import AuthComponent from './components/AuthComponent';
+import LibraryLayout from './components/LibraryLayout';
+import { User } from './types';
 
 const App: React.FC = () => {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const notesQuery = query(collection(db, "notes"));
-    const unsubscribeNotes = onSnapshot(notesQuery, (snapshot) => {
-      const notesData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(), 
-        createdAt: doc.data().createdAt?.toDate() || new Date(),
-        updatedAt: doc.data().updatedAt?.toDate() || new Date()
-      } as Note));
-      setNotes(notesData);
+    const unsubscribe = auth.onAuthStateChanged((authUser) => {
+      if (authUser) {
+        setUser({
+          id: authUser.uid,
+          email: authUser.email || '',
+          displayName: authUser.displayName || '',
+          createdAt: new Date(),
+          lastLoginAt: new Date(),
+        });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
     });
 
-    const categoriesQuery = query(collection(db, "categories"));
-    const unsubscribeCategories = onSnapshot(categoriesQuery, (snapshot) => {
-      const categoriesData = snapshot.docs.map(doc => ({ 
-        id: doc.id, 
-        ...doc.data(),
-        parentId: doc.data().parentId || null
-      } as Category));
-      setCategories(categoriesData);
-    });
-
-    return () => {
-      unsubscribeNotes();
-      unsubscribeCategories();
-    };
+    return () => unsubscribe();
   }, []);
 
-  const filteredNotes = notes
-    .filter(note => selectedCategory === 'all' || note.categoryId === selectedCategory)
-    .filter(note => !selectedTag || note.tags.includes(selectedTag));
+  const handleSignOut = () => {
+    setUser(null);
+  };
+
+  if (loading) {
+    return <div>Loading...</div>;
+  }
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className="flex h-screen bg-gray-100">
-        <Sidebar
-          categories={categories}
-          notes={notes}
-          selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
-          selectedTag={selectedTag}
-          setSelectedTag={setSelectedTag}
-        />
-        <div className="flex-1 flex flex-col">
-          <NoteEditor
-            notes={filteredNotes}
-            categories={categories}
-            editingNote={editingNote}
-            setEditingNote={setEditingNote}
-            selectedCategory={selectedCategory}
-          />
-        </div>
-      </div>
-    </DndProvider>
+    <div className="App">
+      {user ? (
+        <LibraryLayout user={user} onSignOut={handleSignOut} />
+      ) : (
+        <AuthComponent onLogin={setUser} />
+      )}
+    </div>
   );
 };
 

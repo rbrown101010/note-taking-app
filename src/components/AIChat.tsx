@@ -150,12 +150,12 @@ const AIChat: React.FC<AIChatProps> = ({ content, onChange }) => {
   return (
     <div className="relative w-full h-full">
       <div className="mb-2">
-        <label htmlFor="font-select" className="mr-2">Select Font:</label>
+        <label htmlFor="font-select" className="mr-2 text-white">Select Font:</label>
         <select
           id="font-select"
           value={selectedFont}
           onChange={(e) => setSelectedFont(e.target.value)}
-          className="border rounded px-2 py-1"
+          className="border rounded px-2 py-1 bg-gray-800 text-white"
         >
           {fonts.map(font => (
             <option key={font} value={font}>{font}</option>
@@ -170,7 +170,7 @@ const AIChat: React.FC<AIChatProps> = ({ content, onChange }) => {
         formats={formats}
         theme="snow"
         placeholder="Your note content here... (Type \\prompt\\ for OpenAI, //prompt// for Anthropic, or [[prompt]] for Perplexity)"
-        className="text-gray-800 h-full"
+        className="text-white h-full"
         style={{
           fontFamily: selectedFont,
           fontSize: '18px',
@@ -183,6 +183,8 @@ const AIChat: React.FC<AIChatProps> = ({ content, onChange }) => {
             font-size: 18px;
             padding: 20px;
             line-height: 1.3;
+            color: white;
+            background-color: #1f2937;
           }
           .ql-editor p {
             margin-bottom: 0.5em;
@@ -190,12 +192,22 @@ const AIChat: React.FC<AIChatProps> = ({ content, onChange }) => {
           .ql-snow .ql-toolbar {
             border-top-left-radius: 8px;
             border-top-right-radius: 8px;
-            border-color: #e2e8f0;
+            border-color: #4b5563;
+            background-color: #374151;
           }
           .ql-container.ql-snow {
             border-bottom-left-radius: 8px;
             border-bottom-right-radius: 8px;
-            border-color: #e2e8f0;
+            border-color: #4b5563;
+          }
+          .ql-toolbar .ql-stroke {
+            stroke: #e5e7eb;
+          }
+          .ql-toolbar .ql-fill {
+            fill: #e5e7eb;
+          }
+          .ql-toolbar .ql-picker {
+            color: #e5e7eb;
           }
         `}
       </style>

@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { DndProvider } from 'react-dnd';
 import { HTML5Backend } from 'react-dnd-html5-backend';
-import { addDoc, updateDoc, deleteDoc, doc, collection } from "firebase/firestore";
-import { db } from "../firebase";
-import { Category, Note } from '../types';
+import { addCategory, updateCategory, deleteCategory, signOutUser } from "../firebase";
+import { Category, Note, User } from '../types';
 import { organizeCategories } from '../utils';
-import { Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, Mic, LogOut } from 'lucide-react';
 import CategoryList from './CategoryList';
 
 interface SidebarProps {
@@ -15,6 +14,9 @@ interface SidebarProps {
   setSelectedCategory: React.Dispatch<React.SetStateAction<string>>;
   selectedTag: string | null;
   setSelectedTag: React.Dispatch<React.SetStateAction<string | null>>;
+  onVoiceRecordClick: () => void;
+  user: User;
+  onSignOut: () => void;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -24,6 +26,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   setSelectedCategory,
   selectedTag,
   setSelectedTag,
+  onVoiceRecordClick,
+  user,
+  onSignOut
 }) => {
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [organizedCategories, setOrganizedCategories] = useState<Category[]>([]);
@@ -57,53 +62,51 @@ const Sidebar: React.FC<SidebarProps> = ({
     });
   };
 
-  const addNewFolder = async () => {
+  const handleAddFolder = async () => {
     const newCategory: Omit<Category, 'id'> = {
       name: 'New Folder',
       color: `bg-${['red', 'blue', 'green', 'yellow', 'purple', 'pink'][Math.floor(Math.random() * 6)]}-200`,
       parentId: null,
+      userId: user.id
     };
-    await addDoc(collection(db, "categories"), newCategory);
-  };
-
-  const editCategory = async (category: Category) => {
-    const newName = prompt("Enter new folder name", category.name);
-    if (newName && newName !== category.name) {
-      await updateDoc(doc(db, "categories", category.id), { name: newName });
+    try {
+      await addCategory(newCategory, user.id);
+      console.log("New category added successfully");
+    } catch (error) {
+      console.error("Error adding new category:", error);
     }
   };
 
-  const deleteCategory = async (categoryId: string) => {
-    if (window.confirm("Are you sure you want to delete this folder? All notes in this folder will be moved to 'Uncategorized'.")) {
-      await deleteDoc(doc(db, "categories", categoryId));
-
-      const uncategorizedCategory = categories.find(c => c.name === 'Uncategorized');
-      if (!uncategorizedCategory) {
-        const newCategory: Omit<Category, 'id'> = {
-          name: 'Uncategorized',
-          color: 'bg-gray-200',
-          parentId: null,
-        };
-        const docRef = await addDoc(collection(db, "categories"), newCategory);
-        const uncategorizedId = docRef.id;
-
-        notes.forEach(async (note) => {
-          if (note.categoryId === categoryId) {
-            await updateDoc(doc(db, "notes", note.id), { categoryId: uncategorizedId });
-          }
-        });
-      } else {
-        notes.forEach(async (note) => {
-          if (note.categoryId === categoryId) {
-            await updateDoc(doc(db, "notes", note.id), { categoryId: uncategorizedCategory.id });
-          }
-        });
+  const handleEditCategory = async (category: Category) => {
+    const newName = prompt("Enter new folder name", category.name);
+    if (newName && newName !== category.name) {
+      try {
+        await updateCategory(category.id, { ...category, name: newName }, user.id);
+        console.log("Category updated successfully");
+      } catch (error) {
+        console.error("Error updating category:", error);
       }
     }
   };
 
-  const moveCategory = async (draggedId: string, targetId: string) => {
-    await updateDoc(doc(db, "categories", draggedId), { parentId: targetId });
+  const handleDeleteCategory = async (categoryId: string) => {
+    if (window.confirm("Are you sure you want to delete this folder?")) {
+      try {
+        await deleteCategory(categoryId, user.id);
+        console.log("Category deleted successfully");
+      } catch (error) {
+        console.error("Error deleting category:", error);
+      }
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOutUser();
+      onSignOut();
+    } catch (error) {
+      console.error("Error signing out:", error);
+    }
   };
 
   const allTags = Array.from(new Set(notes.flatMap(note => note.tags)));
@@ -111,7 +114,16 @@ const Sidebar: React.FC<SidebarProps> = ({
   return (
     <DndProvider backend={HTML5Backend}>
       <div className="w-64 bg-gray-900 p-4 border-r border-gray-700 flex flex-col h-full">
-        <h2 className="text-xl font-bold mb-4 text-indigo-300">My Library</h2>
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-bold text-indigo-300">My Library</h2>
+          <button
+            onClick={handleSignOut}
+            className="text-gray-400 hover:text-white"
+            title="Sign Out"
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
 
         <div className="flex-grow overflow-auto mb-4">
           <button 
@@ -130,23 +142,29 @@ const Sidebar: React.FC<SidebarProps> = ({
             expandedCategories={expandedCategories}
             selectedCategory={selectedCategory}
             onToggleExpand={toggleCategoryExpansion}
-            onEditCategory={editCategory}
-            onDeleteCategory={deleteCategory}
-            onAddSubcategory={addNewFolder}
+            onEditCategory={handleEditCategory}
+            onDeleteCategory={handleDeleteCategory}
+            onAddSubcategory={handleAddFolder}
             onSelectCategory={setSelectedCategory}
-            onMoveCategory={moveCategory}
+            onMoveCategory={() => {}}
           />
 
           <button 
-            onClick={addNewFolder} 
+            onClick={handleAddFolder} 
             className="mt-4 w-full bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded transition-colors duration-200 flex items-center justify-center"
           >
             <Plus size={16} className="mr-2" /> Add Folder
           </button>
+
+          <button
+            onClick={onVoiceRecordClick}
+            className="mt-4 w-full bg-red-500 hover:bg-red-600 text-white px-2 py-1 rounded transition-colors duration-200 flex items-center justify-center"
+          >
+            <Mic size={16} className="mr-2" /> Record Voice Note
+          </button>
         </div>
 
         <div className="mt-auto">
-          {/* Tags Dropdown */}
           <div>
             <button
               onClick={() => toggleDropdown('tags')}

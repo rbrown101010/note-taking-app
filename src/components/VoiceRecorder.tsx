@@ -1,8 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { Mic, StopCircle, Loader } from 'lucide-react';
-import { addDoc, collection } from "firebase/firestore";
-import { db } from '../firebase';
+import { StopCircle, Loader, X } from 'lucide-react';
+import { addVoiceNote } from '../firebase';
 import { Category, Note } from '../types';
 
 const BACKEND_URL = 'https://new-backend-rileybrown24.replit.app';
@@ -11,19 +10,40 @@ interface VoiceRecorderProps {
   categories: Category[];
   onNoteCreated: (note: Note) => void;
   onClose: () => void;
+  userId: string;
+  autoStart: boolean;
 }
 
-const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ categories, onNoteCreated, onClose }) => {
+const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ categories, onNoteCreated, onClose, userId, autoStart }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<BlobPart[]>([]);
+  const timerRef = useRef<number | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    if (autoStart) {
+      startRecording();
+    }
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [autoStart]);
 
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      mediaRecorderRef.current = new MediaRecorder(stream);
       mediaRecorderRef.current.ondataavailable = (event) => {
         chunksRef.current.push(event.data);
       };
@@ -31,49 +51,53 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ categories, onNoteCreated
         const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
         setAudioBlob(blob);
         chunksRef.current = [];
+        transcribeAndSave(blob);
       };
       mediaRecorderRef.current.start();
       setIsRecording(true);
+      setRecordingTime(0);
+      timerRef.current = window.setInterval(() => {
+        setRecordingTime((prevTime) => prevTime + 1);
+      }, 1000);
+      startWaveAnimation();
     } catch (error) {
       console.error('Error starting recording:', error);
-      alert('Failed to start recording. Please make sure you have given permission to use the microphone.');
+      setError('Failed to start recording. Please make sure you have given permission to use the microphone.');
     }
   };
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
       setIsRecording(false);
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
     }
   };
 
-  const transcribeAndSave = async () => {
-    if (!audioBlob) return;
-
+  const transcribeAndSave = async (blob: Blob) => {
     setIsTranscribing(true);
+    setError(null);
     const formData = new FormData();
-    formData.append('audio', audioBlob, 'recording.webm');
+    formData.append('audio', blob, 'recording.webm');
 
     try {
-      console.log('Sending audio for transcription...');
       const response = await axios.post(`${BACKEND_URL}/api/transcribe`, formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
 
       const transcription = response.data.transcription;
-      console.log('Transcription received:', transcription);
 
-      // Find the "Voice Notes" category or create it if it doesn't exist
       let voiceNoteCategory = categories.find(c => c.name === "Voice Notes");
       if (!voiceNoteCategory) {
-        const newCategoryRef = await addDoc(collection(db, "categories"), {
-          name: "Voice Notes",
-          color: "bg-purple-200",
-        });
-        voiceNoteCategory = { id: newCategoryRef.id, name: "Voice Notes", color: "bg-purple-200" };
+        throw new Error("Voice Notes category not found");
       }
 
-      // Create the new note
       const newNote: Omit<Note, 'id'> = {
         title: `Voice Note ${new Date().toLocaleString()}`,
         content: transcription,
@@ -81,69 +105,103 @@ const VoiceRecorder: React.FC<VoiceRecorderProps> = ({ categories, onNoteCreated
         tags: ["voice"],
         completed: false,
         isVoiceNote: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        userId: userId
       };
 
-      // Save the transcribed note
-      const docRef = await addDoc(collection(db, "notes"), newNote);
-      const savedNote = { id: docRef.id, ...newNote } as Note;
+      const savedNote = await addVoiceNote(newNote, userId);
 
-      // Notify parent component about the new note
       onNoteCreated(savedNote);
-
-      // Clear the audio blob
-      setAudioBlob(null);
       onClose();
     } catch (error) {
       console.error('Error transcribing and saving note:', error);
-      alert('Failed to transcribe and save note. Please try again.');
+      setError('Failed to transcribe and save note. Please try again.');
     } finally {
       setIsTranscribing(false);
     }
   };
 
-  return (
-    <div className="flex flex-col items-center space-y-4">
-      <div className="flex items-center space-x-2">
-        {!isRecording ? (
-          <button
-            onClick={startRecording}
-            className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-full flex items-center"
-            disabled={isTranscribing}
-          >
-            <Mic className="mr-2" /> Start Recording
-          </button>
-        ) : (
-          <button
-            onClick={stopRecording}
-            className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-full flex items-center"
-          >
-            <StopCircle className="mr-2" /> Stop Recording
-          </button>
-        )}
-        {audioBlob && !isTranscribing && (
-          <button
-            onClick={transcribeAndSave}
-            className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-full"
-          >
-            Save Voice Note
-          </button>
-        )}
-        <button
-          onClick={onClose}
-          className="bg-gray-300 hover:bg-gray-400 text-gray-800 px-4 py-2 rounded-full"
-          disabled={isTranscribing}
-        >
-          Cancel
-        </button>
-      </div>
-      {isTranscribing && (
-        <div className="flex items-center space-x-2 text-blue-600">
-          <Loader className="animate-spin" />
-          <span>Transcribing...</span>
-        </div>
-      )}
-    </div>
-  );
-};
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
-export default VoiceRecorder;
+  const startWaveAnimation = () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const width = canvas.width;
+    const height = canvas.height;
+
+    const animate = () => {
+      ctx.clearRect(0, 0, width, height);
+      ctx.beginPath();
+
+      for (let i = 0; i < width; i++) {
+        const y = height / 2 + Math.sin(i * 0.05 + Date.now() * 0.01) * 20;
+        ctx.lineTo(i, y);
+      }
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animate();
+  };
+
+  return (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 backdrop-blur-sm z-50">
+      <div className="relative flex flex-col items-center space-y-4 p-8 bg-blue-600 rounded-lg shadow-md max-w-md w-full">
+        <h2 className="text-2xl font-bold text-white">Voice Recorder</h2>
+        <div className="flex items-center space-x-2">
+          {isRecording ? (
+            <button
+              onClick={stopRecording}
+              className="bg-white hover:bg-gray-100 text-blue-600 px-4 py-2 rounded-full flex items-center"
+            >
+              <StopCircle className="mr-2" /> Stop Recording
+            </button>
+          ) : (
+            <button
+              onClick={onClose}
+              className="bg-white hover:bg-gray-100 text-blue-600 px-4 py-2 rounded-full flex items-center"
+              disabled={isTranscribing}
+            >
+              <X className="mr-2" /> Cancel
+            </button>
+          )}
+        </div>
+        {isRecording && (
+          <div className="text-lg font-semibold text-white">
+            Recording: {formatTime(recordingTime)}
+          </div>
+        )}
+        {isTranscribing && (
+          <div className="flex items-center space-x-2 text-white">
+            <Loader className="animate-spin" />
+            <span>Transcribing...</span>
+          </div>
+        )}
+        {error && (
+          <div className="text-red-200 mt-2">{error}</div>
+        )}
+        <canvas
+          ref={canvasRef}
+          width={300}
+          height={100}
+          className="w-full"
+        />
+        </div>
+        </div>
+        );
+        };
+
+        export default VoiceRecorder;

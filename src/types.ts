@@ -26,7 +26,7 @@ export interface Note {
   isVoiceNote?: boolean;
   createdAt: Date;
   updatedAt: Date;
-  [key: string]: any;
+  media?: string[]; // Array of image and video URLs
 }
 
 export interface VoiceNoteMetadata {
@@ -74,4 +74,17 @@ export interface VoiceRecorderProps {
 export interface AIChatProps {
   content: string;
   onChange: (content: string) => void;
+}
+
+export interface LibraryLayoutProps {
+  user: User;
+  onSignOut: () => void;
+}
+
+export interface NoteViewProps {
+  note: Note;
+  onClose: () => void;
+  onEdit: () => void;
+  topic: Topic | undefined;
+  user: User;
 }

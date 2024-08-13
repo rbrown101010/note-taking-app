@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, setDoc, getDoc, Timestamp, query, where, getDocs } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { Note, Topic } from "./types";
 
 const firebaseConfig = {
@@ -16,6 +17,7 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
+export const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 export const registerUser = async (email: string, password: string) => {
@@ -185,6 +187,30 @@ export const addVoiceNote = async (note: Omit<Note, 'id'>, userId: string) => {
     updatedAt: new Date()
   };
   return addNote(voiceNote, userId);
+};
+
+export const uploadMedia = async (userId: string, noteId: string, file: File): Promise<string> => {
+  const storageRef = ref(storage, `users/${userId}/notes/${noteId}/${file.name}`);
+  await uploadBytes(storageRef, file);
+  return getDownloadURL(storageRef);
+};
+
+export const deleteMedia = async (userId: string, noteId: string, fileName: string): Promise<void> => {
+  const filePath = `users/${userId}/notes/${noteId}/${fileName}`;
+  console.log("Attempting to delete file:", filePath);
+  const storageRef = ref(storage, filePath);
+  try {
+    await deleteObject(storageRef);
+    console.log("File successfully deleted");
+  } catch (error) {
+    console.error("Error deleting file:", error);
+    throw error;
+  }
+};
+
+export const updateNoteMedia = async (userId: string, noteId: string, media: string[]): Promise<void> => {
+  const noteRef = doc(db, `users/${userId}/notes`, noteId);
+  await updateDoc(noteRef, { media });
 };
 
 export default app;

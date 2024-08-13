@@ -4,6 +4,8 @@ import { db } from '../firebase';
 import { Note, Topic, User } from '../types';
 import { sortNotesByDate } from '../utils';
 import AIChat from './AIChat';
+import NoteView from './NoteView';
+import { Edit, Trash2 } from 'lucide-react';
 
 interface NoteEditorProps {
   notes: Note[];
@@ -17,6 +19,8 @@ interface NoteEditorProps {
 const NoteEditor: React.FC<NoteEditorProps> = ({ notes, topics, editingNote, setEditingNote, selectedTopic, user }) => {
   const [localEditingNote, setLocalEditingNote] = useState<Note | null>(null);
   const [sortedNotes, setSortedNotes] = useState<Note[]>([]);
+  const [viewingNote, setViewingNote] = useState<Note | null>(null);
+  const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
 
   useEffect(() => {
     setSortedNotes(sortNotesByDate(notes));
@@ -25,11 +29,19 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ notes, topics, editingNote, set
   useEffect(() => {
     if (editingNote) {
       setLocalEditingNote(editingNote);
+      setViewingNote(null);
     }
   }, [editingNote]);
 
   const handleNoteClick = (note: Note) => {
+    setViewingNote(note);
+    setEditingNote(null);
+  };
+
+  const handleEditClick = (note: Note, event: React.MouseEvent) => {
+    event.stopPropagation();
     setEditingNote(note);
+    setViewingNote(null);
   };
 
   const handleLocalNoteChange = (newContent: string) => {
@@ -60,7 +72,15 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ notes, topics, editingNote, set
         setEditingNote(null);
         setLocalEditingNote(null);
       }
+      if (viewingNote?.id === noteId) {
+        setViewingNote(null);
+      }
     }
+  };
+
+  const handleVoiceNoteCreated = (newNote: Note) => {
+    setSortedNotes(prevNotes => sortNotesByDate([...prevNotes, newNote]));
+    setIsVoiceRecorderOpen(false);
   };
 
   return (
@@ -102,6 +122,17 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ notes, topics, editingNote, set
             </div>
           </div>
         </div>
+      ) : viewingNote ? (
+        <NoteView
+          note={viewingNote}
+          onClose={() => setViewingNote(null)}
+          onEdit={() => {
+            setEditingNote(viewingNote);
+            setViewingNote(null);
+          }}
+          topic={topics.find(t => t.id === viewingNote.topicId)}
+          user={user}
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {sortedNotes.map((note) => {
@@ -119,15 +150,30 @@ const NoteEditor: React.FC<NoteEditorProps> = ({ notes, topics, editingNote, set
                   Updated: {note.updatedAt.toLocaleString()}
                 </div>
                 <button 
+                  className="absolute bottom-2 right-10 text-blue-500 hover:text-blue-700 transition-colors duration-200"
+                  onClick={(e) => handleEditClick(note, e)}
+                >
+                  <Edit size={16} />
+                </button>
+                <button 
                   className="absolute bottom-2 right-2 text-red-500 hover:text-red-700 transition-colors duration-200"
                   onClick={(e) => deleteNote(note.id, e)}
                 >
-                  🗑️
+                  <Trash2 size={16} />
                 </button>
               </div>
             );
           })}
         </div>
+      )}
+      {isVoiceRecorderOpen && (
+        <VoiceRecorder
+          topics={topics}
+          onNoteCreated={handleVoiceNoteCreated}
+          onClose={() => setIsVoiceRecorderOpen(false)}
+          userId={user.id}
+          autoStart={true}
+        />
       )}
     </div>
   );

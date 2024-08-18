@@ -1,8 +1,10 @@
-import { initializeApp } from "firebase/app";
-import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, setDoc, getDoc, Timestamp, query, where, getDocs } from "firebase/firestore";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { initializeApp, FirebaseApp } from "firebase/app";
+import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, setDoc, getDoc, Timestamp, query, where, getDocs, DocumentReference, Firestore } from "firebase/firestore";
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, GoogleAuthProvider, signInWithPopup, Auth, UserCredential } from "firebase/auth";
 import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
 import { Note, Topic } from "./types";
+
+console.log('Environment Variables:', import.meta.env);
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -14,16 +16,28 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const storage = getStorage(app);
-const googleProvider = new GoogleAuthProvider();
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
+let storage: ReturnType<typeof getStorage>;
+let googleProvider: GoogleAuthProvider;
 
-export const registerUser = async (email: string, password: string) => {
+try {
+  app = initializeApp(firebaseConfig);
+  db = getFirestore(app);
+  auth = getAuth(app);
+  storage = getStorage(app);
+  googleProvider = new GoogleAuthProvider();
+  console.log('Firebase initialized successfully');
+} catch (error) {
+  console.error('Error initializing Firebase:', error);
+  throw error;
+}
+
+export const registerUser = async (email: string, password: string): Promise<User> => {
   try {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    const userCredential: UserCredential = await createUserWithEmailAndPassword(auth, email, password);
+    const user: User = userCredential.user;
     await createUserDocument(user);
     return user;
   } catch (error) {
@@ -32,9 +46,9 @@ export const registerUser = async (email: string, password: string) => {
   }
 };
 
-export const loginUser = async (email: string, password: string) => {
+export const loginUser = async (email: string, password: string): Promise<User> => {
   try {
-    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    const userCredential: UserCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
   } catch (error) {
     console.error("Error logging in user:", error);
@@ -42,10 +56,10 @@ export const loginUser = async (email: string, password: string) => {
   }
 };
 
-export const signInWithGoogle = async () => {
+export const signInWithGoogle = async (): Promise<User> => {
   try {
-    const result = await signInWithPopup(auth, googleProvider);
-    const user = result.user;
+    const result: UserCredential = await signInWithPopup(auth, googleProvider);
+    const user: User = result.user;
     await createUserDocument(user);
     return user;
   } catch (error) {
@@ -54,7 +68,7 @@ export const signInWithGoogle = async () => {
   }
 };
 
-export const signOutUser = async () => {
+export const signOutUser = async (): Promise<void> => {
   try {
     await signOut(auth);
     console.log("User signed out successfully");
@@ -64,10 +78,10 @@ export const signOutUser = async () => {
   }
 };
 
-export const createUserDocument = async (user: User) => {
+export const createUserDocument = async (user: User): Promise<void> => {
   if (!user) return;
 
-  const userDocRef = doc(db, "users", user.uid);
+  const userDocRef: DocumentReference = doc(db, "users", user.uid);
   const userSnapshot = await getDoc(userDocRef);
 
   if (!userSnapshot.exists()) {
@@ -83,6 +97,7 @@ export const createUserDocument = async (user: User) => {
       await initializeDefaultTopics(user.uid);
     } catch (error) {
       console.error("Error creating user document", error);
+      throw error;
     }
   } else {
     await updateDoc(userDocRef, {
@@ -91,10 +106,10 @@ export const createUserDocument = async (user: User) => {
   }
 };
 
-export const initializeDefaultTopics = async (userId: string) => {
-  const defaultTopics = [
-    { name: "No Topic", color: "bg-gray-200", isDefault: true, order: 1000 },
-    { name: "Voice Notes", color: "bg-blue-200", isDefault: true, order: 1001 }
+export const initializeDefaultTopics = async (userId: string): Promise<void> => {
+  const defaultTopics: Omit<Topic, 'id'>[] = [
+    { name: "No Topic", description: "Default topic for uncategorized notes", color: "bg-gray-200", isDefault: true, order: 1000, userId },
+    { name: "Voice Notes", description: "Topic for voice-recorded notes", color: "bg-blue-200", isDefault: true, order: 1001, userId }
   ];
 
   for (const topic of defaultTopics) {
@@ -106,22 +121,22 @@ export const initializeDefaultTopics = async (userId: string) => {
     const topicSnapshot = await getDocs(topicQuery);
 
     if (topicSnapshot.empty) {
-      await addTopic({ ...topic, userId }, userId);
+      await addTopic(topic, userId);
     }
   }
 };
 
-export const addTopic = async (topic: Omit<Topic, 'id'>, userId: string) => {
+export const addTopic = async (topic: Omit<Topic, 'id'>, userId: string): Promise<Topic> => {
   try {
     const docRef = await addDoc(collection(db, `users/${userId}/topics`), topic);
-    return { id: docRef.id, ...topic } as Topic;
+    return { id: docRef.id, ...topic };
   } catch (error) {
     console.error("Error adding topic:", error);
     throw error;
   }
 };
 
-export const updateTopic = async (id: string, topicUpdates: Partial<Topic>, userId: string) => {
+export const updateTopic = async (id: string, topicUpdates: Partial<Topic>, userId: string): Promise<Partial<Topic> & { id: string }> => {
   try {
     const topicRef = doc(db, `users/${userId}/topics`, id);
     await updateDoc(topicRef, topicUpdates);
@@ -133,7 +148,7 @@ export const updateTopic = async (id: string, topicUpdates: Partial<Topic>, user
   }
 };
 
-export const deleteTopic = async (id: string, userId: string) => {
+export const deleteTopic = async (id: string, userId: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, `users/${userId}/topics`, id));
   } catch (error) {
@@ -142,7 +157,7 @@ export const deleteTopic = async (id: string, userId: string) => {
   }
 };
 
-export const addNote = async (note: Omit<Note, 'id'>, userId: string) => {
+export const addNote = async (note: Omit<Note, 'id'>, userId: string): Promise<Note> => {
   try {
     const noteToAdd = {
       ...note,
@@ -150,14 +165,14 @@ export const addNote = async (note: Omit<Note, 'id'>, userId: string) => {
       updatedAt: Timestamp.fromDate(note.updatedAt)
     };
     const docRef = await addDoc(collection(db, `users/${userId}/notes`), noteToAdd);
-    return { id: docRef.id, ...note } as Note;
+    return { id: docRef.id, ...note };
   } catch (error) {
     console.error("Error adding note:", error);
     throw error;
   }
 };
 
-export const updateNote = async (id: string, note: Partial<Note>, userId: string) => {
+export const updateNote = async (id: string, note: Partial<Note>, userId: string): Promise<void> => {
   try {
     const noteToUpdate = {
       ...note,
@@ -170,7 +185,7 @@ export const updateNote = async (id: string, note: Partial<Note>, userId: string
   }
 };
 
-export const deleteNote = async (id: string, userId: string) => {
+export const deleteNote = async (id: string, userId: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, `users/${userId}/notes`, id));
   } catch (error) {
@@ -179,9 +194,9 @@ export const deleteNote = async (id: string, userId: string) => {
   }
 };
 
-export const addVoiceNote = async (note: Omit<Note, 'id'>, userId: string) => {
-  const voiceNote = { 
-    ...note, 
+export const addVoiceNote = async (note: Omit<Note, 'id'>, userId: string): Promise<Note> => {
+  const voiceNote = {
+    ...note,
     isVoiceNote: true,
     createdAt: new Date(),
     updatedAt: new Date()
@@ -213,4 +228,4 @@ export const updateNoteMedia = async (userId: string, noteId: string, media: str
   await updateDoc(noteRef, { media });
 };
 
-export default app;
+export { app, db, auth, storage };

@@ -31,11 +31,8 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         lastLoginAt: new Date(),
       });
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred');
-      }
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
     }
   };
 
@@ -50,11 +47,8 @@ const AuthComponent: React.FC<AuthComponentProps> = ({ onLogin }) => {
         lastLoginAt: new Date(),
       });
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError('An unknown error occurred');
-      }
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred';
+      setError(errorMessage);
     }
   };
 

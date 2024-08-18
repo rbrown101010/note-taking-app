@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, addDoc } from "firebase/firestore";
+import { collection, onSnapshot, query, addDoc, where } from "firebase/firestore";
 import { db } from "../firebase";
 import Sidebar from "./Sidebar";
 import NoteEditor from "./NoteEditor";
 import VoiceRecorder from './VoiceRecorder';
 import { Topic, Note, User } from '../types';
-import { Mic } from 'lucide-react';
+import { Mic, Plus } from 'lucide-react';
 
 interface LibraryLayoutProps {
   user: User;
@@ -15,14 +15,17 @@ interface LibraryLayoutProps {
 const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
   const [topics, setTopics] = useState<Topic[]>([]);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [pinnedNotes, setPinnedNotes] = useState<Note[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string>('all');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
 
   useEffect(() => {
+    console.log("App component mounted");
     const topicsQuery = query(collection(db, `users/${user.id}/topics`));
     const notesQuery = query(collection(db, `users/${user.id}/notes`));
+    const pinnedNotesQuery = query(collection(db, `users/${user.id}/notes`), where("pinned", "==", true));
 
     const unsubscribeTopics = onSnapshot(topicsQuery, (snapshot) => {
       const topicsData = snapshot.docs.map(doc => ({ 
@@ -42,9 +45,20 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
       setNotes(notesData);
     });
 
+    const unsubscribePinnedNotes = onSnapshot(pinnedNotesQuery, (snapshot) => {
+      const pinnedNotesData = snapshot.docs.map(doc => ({ 
+        id: doc.id, 
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      } as Note));
+      setPinnedNotes(pinnedNotesData);
+    });
+
     return () => {
       unsubscribeTopics();
       unsubscribeNotes();
+      unsubscribePinnedNotes();
     };
   }, [user.id]);
 
@@ -81,6 +95,8 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
       topicId: topicId,
       tags: [],
       completed: false,
+      pinned: false,
+      archived: false,
       createdAt: new Date(),
       updatedAt: new Date(),
       userId: user.id
@@ -95,8 +111,11 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
     }
   };
 
+  const selectedTopicData = topics.find(topic => topic.id === selectedTopic) || 
+                            { name: "All Topics", description: "View all your notes across topics.", color: "bg-gray-600" };
+
   return (
-    <div className="flex h-screen bg-gradient-to-br from-gray-800 to-gray-900 text-gray-100 font-sans overflow-hidden">
+    <div className="flex h-screen bg-gray-900 text-gray-100 font-sans overflow-hidden">
       <Sidebar
         topics={topics}
         notes={notes}
@@ -109,24 +128,28 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
         onSignOut={onSignOut}
       />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex justify-between items-center p-4 bg-gray-800">
-          <h2 className="text-3xl font-bold text-white">Notes</h2>
-          <div className="flex space-x-2">
-            <button 
-              onClick={handleNewNoteClick}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full transition-colors duration-200 shadow-md"
-            >
-              New Note
-            </button>
-            <button 
-              onClick={handleVoiceRecordClick}
-              className="bg-white hover:bg-gray-100 text-blue-600 px-4 py-2 rounded-full flex items-center transition-colors duration-200 shadow-md"
-            >
-              <Mic className="mr-2" /> Record
-            </button>
+        <div className="bg-gray-800 p-6 shadow-md">
+          <div className="max-w-7xl mx-auto">
+            <h2 className="text-3xl font-bold text-white mb-2">{selectedTopicData.name}</h2>
+            <p className="text-lg text-gray-300 mb-4">{selectedTopicData.description}</p>
+            <div className={`h-1 ${selectedTopicData.color} w-full mb-4`}></div>
+            <div className="flex space-x-4">
+              <button 
+                onClick={handleNewNoteClick}
+                className="bg-white text-blue-600 px-4 py-2 rounded-full transition-colors duration-200 shadow-md text-sm flex items-center"
+              >
+                <Plus size={16} className="mr-2" /> New Note
+              </button>
+              <button 
+                onClick={handleVoiceRecordClick}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-full flex items-center transition-colors duration-200 shadow-md text-sm"
+              >
+                <Mic size={16} className="mr-2" /> Record
+              </button>
+            </div>
           </div>
         </div>
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto bg-gray-900">
           {isVoiceRecorderOpen && (
             <VoiceRecorder 
               topics={topics} 
@@ -136,15 +159,19 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
               autoStart={true}
             />
           )}
-          <NoteEditor
-            notes={notes.filter(note => selectedTopic === 'all' || note.topicId === selectedTopic)
-                       .filter(note => !selectedTag || note.tags.includes(selectedTag))}
-            topics={topics}
-            editingNote={editingNote}
-            setEditingNote={setEditingNote}
-            selectedTopic={selectedTopic}
-            user={user}
-          />
+          <div className="max-w-7xl mx-auto px-6 py-8">
+            <NoteEditor
+              notes={notes.filter(note => selectedTopic === 'all' || note.topicId === selectedTopic)
+                         .filter(note => !selectedTag || note.tags.includes(selectedTag))}
+              pinnedNotes={pinnedNotes.filter(note => selectedTopic === 'all' || note.topicId === selectedTopic)
+                                     .filter(note => !selectedTag || note.tags.includes(selectedTag))}
+              topics={topics}
+              editingNote={editingNote}
+              setEditingNote={setEditingNote}
+              selectedTopic={selectedTopic}
+              user={user}
+            />
+          </div>
         </div>
       </div>
     </div>

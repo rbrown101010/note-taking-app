@@ -40,7 +40,7 @@ const NoteView: React.FC<NoteViewProps> = ({ note, onClose, onEdit, topic, user 
           await updateNote(note.id, { media: updatedMedia }, user.id);
         } catch (error) {
           console.error("Error uploading media:", error);
-          setError(`Failed to upload media: ${error.message}`);
+          setError(error instanceof Error ? error.message : 'An unknown error occurred');
         }
       }
     }
@@ -67,16 +67,14 @@ const NoteView: React.FC<NoteViewProps> = ({ note, onClose, onEdit, topic, user 
       }
     } catch (error) {
       console.error("Error deleting media:", error);
-      setError(`Failed to delete media: ${error.message}`);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
     }
   };
 
-  const isVideo = (url: string) => {
+  const isVideo = (url: string): boolean => {
     const videoExtensions = ['.mp4', '.webm', '.ogg'];
     return videoExtensions.some(ext => url.toLowerCase().endsWith(ext));
   };
-
-  // ... (rest of the component remains unchanged)
 
   return (
     <div className={`fixed inset-0 bg-gray-900 bg-opacity-75 z-50 flex items-center justify-center p-4`}>

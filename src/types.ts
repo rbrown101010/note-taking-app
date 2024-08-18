@@ -9,6 +9,7 @@ export interface User {
 export interface Topic {
   id: string;
   name: string;
+  description?: string;
   color: string;
   userId: string;
   isDefault: boolean;
@@ -26,7 +27,9 @@ export interface Note {
   isVoiceNote?: boolean;
   createdAt: Date;
   updatedAt: Date;
-  media?: string[]; // Array of image and video URLs
+  media?: string[];
+  pinned?: boolean;
+  archived?: boolean;
 }
 
 export interface VoiceNoteMetadata {

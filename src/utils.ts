@@ -1,21 +1,24 @@
-import { Category, Note } from './types';
+import { Topic, Note } from './types';
 
 export const sortNotesByDate = (notes: Note[]): Note[] => {
   return notes.sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 };
 
-export const sortCategoriesAlphabetically = (categories: Category[]): Category[] => {
-  return categories.sort((a, b) => a.name.localeCompare(b.name));
+export const sortTopicsAlphabetically = (topics: Topic[]): Topic[] => {
+  return topics.sort((a, b) => a.name.localeCompare(b.name));
 };
 
-export const organizeCategories = (categories: Category[]): Category[] => {
-  const rootCategories = categories.filter(c => c.parentId === null);
-  const childCategories = categories.filter(c => c.parentId !== null);
-  const sortedRootCategories = sortCategoriesAlphabetically(rootCategories);
-  return sortedRootCategories.reduce((acc: Category[], rootCategory) => {
-    acc.push(rootCategory);
-    const children = childCategories.filter(c => c.parentId === rootCategory.id);
-    acc.push(...sortCategoriesAlphabetically(children));
+// If you need the organizeTopics function, uncomment and update it:
+/*
+export const organizeTopics = (topics: Topic[]): Topic[] => {
+  const rootTopics = topics.filter(t => !t.parentId);
+  const childTopics = topics.filter(t => t.parentId);
+  const sortedRootTopics = sortTopicsAlphabetically(rootTopics);
+  return sortedRootTopics.reduce((acc: Topic[], rootTopic) => {
+    acc.push(rootTopic);
+    const children = childTopics.filter(c => c.parentId === rootTopic.id);
+    acc.push(...sortTopicsAlphabetically(children));
     return acc;
   }, []);
 };
+*/

@@ -49,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const handleAddTopic = async () => {
     const newTopic: Omit<Topic, 'id'> = {
       name: 'New Topic',
+      description: '',
       color: `bg-${['red', 'blue', 'green', 'yellow', 'purple', 'pink'][Math.floor(Math.random() * 6)]}-200`,
       userId: user.id,
       isDefault: false,
@@ -68,10 +69,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     setIsEditModalOpen(true);
   };
 
-  const handleSaveTopicEdit = async (newName: string) => {
-    if (editingTopic && newName && newName !== editingTopic.name) {
+  const handleSaveTopicEdit = async (newName: string, newDescription: string) => {
+    if (editingTopic && (newName !== editingTopic.name || newDescription !== editingTopic.description)) {
       try {
-        await updateTopic(editingTopic.id, { name: newName }, user.id);
+        await updateTopic(editingTopic.id, { name: newName, description: newDescription }, user.id);
         console.log("Topic updated successfully");
       } catch (error) {
         console.error("Error updating topic:", error);
@@ -104,8 +105,10 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const allTags = Array.from(new Set(notes.flatMap(note => note.tags)));
 
+  const sidebarButtonClass = "w-full text-left px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200 bg-gray-700 text-gray-300 hover:bg-gray-600";
+
   return (
-    <div className="w-64 bg-gray-900 p-4 border-r border-gray-700 flex flex-col h-screen overflow-hidden">
+    <div className="w-80 bg-gray-900 p-4 flex flex-col h-screen overflow-hidden">
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-xl font-bold text-indigo-300">My Library</h2>
         <button
@@ -120,11 +123,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       <div className="flex-grow overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-900">
         <button 
           onClick={() => setSelectedTopic('all')}
-          className={`w-full mb-4 px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${
-            selectedTopic === 'all' 
-              ? 'bg-indigo-500 text-white' 
-              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-          }`}
+          className={`${sidebarButtonClass} mb-2`}
         >
           All Topics
         </button>
@@ -139,14 +138,14 @@ const Sidebar: React.FC<SidebarProps> = ({
 
         <button 
           onClick={handleAddTopic} 
-          className="mt-4 w-full bg-indigo-500 hover:bg-indigo-600 text-white px-2 py-1 rounded transition-colors duration-200 flex items-center justify-center"
+          className={`${sidebarButtonClass} mt-2 mb-2 flex items-center`}
         >
           <Plus size={16} className="mr-2" /> Add Topic
         </button>
 
         <button 
           onClick={() => navigate('/profile')}
-          className="mt-4 w-full px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 bg-gray-700 text-gray-300 hover:bg-gray-600 flex items-center justify-center"
+          className={`${sidebarButtonClass} mt-2 mb-2 flex items-center`}
         >
           <UserIcon size={16} className="mr-2" /> Profile
         </button>
@@ -182,6 +181,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleSaveTopicEdit}
         initialName={editingTopic?.name || ''}
+        initialDescription={editingTopic?.description || ''}
       />
     </div>
   );

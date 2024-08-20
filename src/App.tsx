@@ -1,10 +1,11 @@
 import React, { useState, useEffect, ErrorInfo } from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
 import { User as FirebaseUser } from 'firebase/auth';
-import { auth } from './firebase';
+import { auth, signInWithGoogle } from './firebase';
 import AuthComponent from './components/AuthComponent';
 import LibraryLayout from './components/LibraryLayout';
 import Profile from './components/Profile';
+import CalendarView from './components/CalendarView';
 import { User } from './types';
 
 interface ErrorBoundaryState {
@@ -67,6 +68,21 @@ const App: React.FC = () => {
     setUser(null);
   };
 
+  const handleGoogleSignIn = async (): Promise<void> => {
+    try {
+      const googleUser = await signInWithGoogle();
+      setUser({
+        id: googleUser.uid,
+        email: googleUser.email || '',
+        displayName: googleUser.displayName || '',
+        createdAt: new Date(googleUser.metadata.creationTime || Date.now()),
+        lastLoginAt: new Date(googleUser.metadata.lastSignInTime || Date.now()),
+      });
+    } catch (error) {
+      console.error("Error signing in with Google:", error);
+    }
+  };
+
   if (loading) {
     return <div>Loading...</div>;
   }
@@ -78,11 +94,12 @@ const App: React.FC = () => {
       <Router>
         <div className="App">
           {user === null ? (
-            <AuthComponent onLogin={setUser} />
+            <AuthComponent onLogin={setUser} onGoogleSignIn={handleGoogleSignIn} />
           ) : (
             <Routes>
               <Route path="/" element={<LibraryLayout user={user} onSignOut={handleSignOut} />} />
               <Route path="/profile" element={<Profile user={user} />} />
+              <Route path="/calendar" element={<CalendarView user={user} notes={[]} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           )}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { addTopic, updateTopic, deleteTopic, signOutUser } from "../firebase";
 import { Topic, Note, User } from '../types';
-import { Plus, ChevronDown, ChevronUp, LogOut, User as UserIcon } from 'lucide-react';
+import { Plus, ChevronDown, ChevronUp, LogOut, User as UserIcon, Calendar } from 'lucide-react';
 import TopicList from './TopicList';
 import EditTopicModal from './EditTopicModal';
 import { useNavigate } from 'react-router-dom';
@@ -14,6 +14,7 @@ interface SidebarProps {
   selectedTag: string | null;
   setSelectedTag: React.Dispatch<React.SetStateAction<string | null>>;
   onVoiceRecordClick: () => void;
+  onCalendarViewClick: () => void;
   user: User;
   onSignOut: () => void;
 }
@@ -26,6 +27,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   selectedTag,
   setSelectedTag,
   onVoiceRecordClick,
+  onCalendarViewClick,
   user,
   onSignOut
 }) => {
@@ -150,6 +152,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           <UserIcon size={16} className="mr-2" /> Profile
         </button>
 
+        <button 
+          onClick={onCalendarViewClick}
+          className={`${sidebarButtonClass} mt-2 mb-2 flex items-center`}
+        >
+          <Calendar size={16} className="mr-2" /> Calendar View
+        </button>
+
         <div className="mt-4">
           <button
             onClick={() => toggleDropdown('tags')}
@@ -167,24 +176,24 @@ const Sidebar: React.FC<SidebarProps> = ({
                     selectedTag === tag ? 'bg-indigo-500 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
                   onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                >
+                  >
                   #{tag}
-                </button>
-              ))}
-            </div>
-          )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        <EditTopicModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          onSave={handleSaveTopicEdit}
+          initialName={editingTopic?.name || ''}
+          initialDescription={editingTopic?.description || ''}
+        />
       </div>
+    );
+  };
 
-      <EditTopicModal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleSaveTopicEdit}
-        initialName={editingTopic?.name || ''}
-        initialDescription={editingTopic?.description || ''}
-      />
-    </div>
-  );
-};
-
-export default Sidebar;
+  export default Sidebar;

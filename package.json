@@ -13,6 +13,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/react": "^18.0.15",
+    "@types/react-big-calendar": "^1.8.9",
     "@types/react-dom": "^18.0.6",
     "@types/uuid": "^10.0.0",
     "@vitejs/plugin-react": "^2.2.0",
@@ -21,6 +22,7 @@
   },
   "dependencies": {
     "@types/react-calendar": "^4.1.0",
+    "@types/react-datepicker": "^7.0.0",
     "axios": "^1.7.3",
     "date-fns": "^3.6.0",
     "firebase": "^10.12.3",
@@ -28,6 +30,7 @@
     "react": "^18.2.0",
     "react-big-calendar": "^1.13.1",
     "react-calendar": "^5.0.0",
+    "react-datepicker": "^7.3.0",
     "react-dnd": "^16.0.1",
     "react-dnd-html5-backend": "^16.0.1",
     "react-dom": "^18.2.0",

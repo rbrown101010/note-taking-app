@@ -1,8 +1,8 @@
 import { initializeApp, FirebaseApp } from "firebase/app";
 import { getFirestore, collection, addDoc, updateDoc, doc, deleteDoc, setDoc, getDoc, Timestamp, query, where, getDocs, DocumentReference, Firestore } from "firebase/firestore";
 import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, User, GoogleAuthProvider, signInWithPopup, Auth, UserCredential } from "firebase/auth";
-import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import { Note, Topic } from "./types";
+import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, StorageError } from "firebase/storage";
+import { Note, Topic, CalendarEvent } from "./types";
 
 console.log('Environment Variables:', import.meta.env);
 
@@ -28,6 +28,7 @@ try {
   auth = getAuth(app);
   storage = getStorage(app);
   googleProvider = new GoogleAuthProvider();
+  googleProvider.addScope('https://www.googleapis.com/auth/calendar');
   console.log('Firebase initialized successfully');
 } catch (error) {
   console.error('Error initializing Firebase:', error);
@@ -205,9 +206,26 @@ export const addVoiceNote = async (note: Omit<Note, 'id'>, userId: string): Prom
 };
 
 export const uploadMedia = async (userId: string, noteId: string, file: File): Promise<string> => {
-  const storageRef = ref(storage, `users/${userId}/notes/${noteId}/${file.name}`);
-  await uploadBytes(storageRef, file);
-  return getDownloadURL(storageRef);
+  console.log(`Uploading media for user ${userId}, note ${noteId}, file ${file.name}`);
+  try {
+    const storageRef = ref(storage, `users/${userId}/notes/${noteId}/${file.name}`);
+    console.log('Storage reference created:', storageRef.fullPath);
+
+    const uploadResult = await uploadBytes(storageRef, file);
+    console.log('File uploaded successfully:', uploadResult.metadata.fullPath);
+
+    const downloadURL = await getDownloadURL(storageRef);
+    console.log('Download URL obtained:', downloadURL);
+
+    return downloadURL;
+  } catch (error) {
+    if (error instanceof StorageError) {
+      console.error('Firebase Storage Error:', error.code, error.message);
+    } else {
+      console.error('Unknown error during media upload:', error);
+    }
+    throw error;
+  }
 };
 
 export const deleteMedia = async (userId: string, noteId: string, fileName: string): Promise<void> => {
@@ -218,14 +236,55 @@ export const deleteMedia = async (userId: string, noteId: string, fileName: stri
     await deleteObject(storageRef);
     console.log("File successfully deleted");
   } catch (error) {
-    console.error("Error deleting file:", error);
+    if (error instanceof StorageError) {
+      console.error('Firebase Storage Error during deletion:', error.code, error.message);
+    } else {
+      console.error("Unknown error deleting file:", error);
+    }
     throw error;
   }
 };
 
 export const updateNoteMedia = async (userId: string, noteId: string, media: string[]): Promise<void> => {
-  const noteRef = doc(db, `users/${userId}/notes`, noteId);
-  await updateDoc(noteRef, { media });
+  try {
+    const noteRef = doc(db, `users/${userId}/notes`, noteId);
+    await updateDoc(noteRef, { media });
+    console.log(`Note media updated for note ${noteId}`);
+  } catch (error) {
+    console.error("Error updating note media:", error);
+    throw error;
+  }
+};
+
+// Google Calendar Integration
+export const getCalendarEvents = async (userId: string): Promise<CalendarEvent[]> => {
+  try {
+    const eventsRef = collection(db, `users/${userId}/calendarEvents`);
+    const snapshot = await getDocs(eventsRef);
+    return snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      start: doc.data().start.toDate(),
+      end: doc.data().end.toDate()
+    } as CalendarEvent));
+  } catch (error) {
+    console.error("Error fetching calendar events:", error);
+    throw error;
+  }
+};
+
+export const addCalendarEvent = async (userId: string, event: CalendarEvent): Promise<void> => {
+  try {
+    const eventToAdd = {
+      ...event,
+      start: Timestamp.fromDate(event.start),
+      end: Timestamp.fromDate(event.end)
+    };
+    await addDoc(collection(db, `users/${userId}/calendarEvents`), eventToAdd);
+  } catch (error) {
+    console.error("Error adding calendar event:", error);
+    throw error;
+  }
 };
 
 export { app, db, auth, storage };

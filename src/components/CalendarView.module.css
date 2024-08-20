@@ -1,0 +1,97 @@
+/* CalendarView.module.css */
+.calendarContainer {
+  height: 100%;
+  padding: 1rem;
+  background-color: #1a202c;
+  color: #e2e8f0;
+}
+
+.viewButtons {
+  margin-bottom: 1rem;
+}
+
+.viewButton {
+  margin-right: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  background-color: #2d3748;
+  color: #e2e8f0;
+  border: none;
+  cursor: pointer;
+}
+
+.activeView {
+  background-color: #4299e1;
+}
+
+.verticalWeekView {
+  display: flex;
+  flex-direction: column;
+  height: calc(100vh - 150px);
+  overflow-y: auto;
+}
+
+.dayColumn {
+  border-bottom: 1px solid #4a5568;
+  padding: 10px 0;
+}
+
+.dayHeader {
+  font-weight: bold;
+  margin-bottom: 5px;
+}
+
+.dayEvents {
+  display: flex;
+  flex-direction: column;
+}
+
+.event {
+  margin: 2px 0;
+  padding: 5px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.noteEvent {
+  background-color: #4299e1;
+}
+
+.calendarEvent {
+  background-color: #48bb78;
+}
+
+/* Styles for react-big-calendar */
+:global(.rbc-calendar) {
+  background-color: #1a202c;
+  color: #e2e8f0;
+}
+
+:global(.rbc-header) {
+  background-color: #2d3748;
+  color: #e2e8f0;
+}
+
+:global(.rbc-today) {
+  background-color: #2d3748;
+}
+
+:global(.rbc-event) {
+  background-color: #4299e1;
+}
+
+:global(.rbc-off-range-bg) {
+  background-color: #2d3748;
+}
+
+:global(.rbc-day-bg + .rbc-day-bg) {
+  border-left: 1px solid #4a5568;
+}
+
+:global(.rbc-month-row + .rbc-month-row) {
+  border-top: 1px solid #4a5568;
+}
+
+:global(.rbc-timeslot-group) {
+  border-bottom: 1px solid #4a5568;
+}

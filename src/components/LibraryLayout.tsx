@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import Sidebar from "./Sidebar";
 import NoteEditor from "./NoteEditor";
 import VoiceRecorder from './VoiceRecorder';
+import CalendarView from './CalendarView';
 import { Topic, Note, User } from '../types';
 import { Mic, Plus } from 'lucide-react';
 
@@ -20,9 +21,10 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [editingNote, setEditingNote] = useState<Note | null>(null);
   const [isVoiceRecorderOpen, setIsVoiceRecorderOpen] = useState(false);
+  const [isCalendarViewOpen, setIsCalendarViewOpen] = useState(false);
 
   useEffect(() => {
-    console.log("App component mounted");
+    console.log("LibraryLayout component mounted");
     const topicsQuery = query(collection(db, `users/${user.id}/topics`));
     const notesQuery = query(collection(db, `users/${user.id}/notes`));
     const pinnedNotesQuery = query(collection(db, `users/${user.id}/notes`), where("pinned", "==", true));
@@ -64,6 +66,10 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
 
   const handleVoiceRecordClick = () => {
     setIsVoiceRecorderOpen(true);
+  };
+
+  const handleCalendarViewClick = () => {
+    setIsCalendarViewOpen(!isCalendarViewOpen);
   };
 
   const handleNoteCreated = (newNote: Note) => {
@@ -124,6 +130,7 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
         selectedTag={selectedTag}
         setSelectedTag={setSelectedTag}
         onVoiceRecordClick={handleVoiceRecordClick}
+        onCalendarViewClick={handleCalendarViewClick}
         user={user}
         onSignOut={onSignOut}
       />
@@ -159,19 +166,23 @@ const LibraryLayout: React.FC<LibraryLayoutProps> = ({ user, onSignOut }) => {
               autoStart={true}
             />
           )}
-          <div className="max-w-7xl mx-auto px-6 py-8">
-            <NoteEditor
-              notes={notes.filter(note => selectedTopic === 'all' || note.topicId === selectedTopic)
-                         .filter(note => !selectedTag || note.tags.includes(selectedTag))}
-              pinnedNotes={pinnedNotes.filter(note => selectedTopic === 'all' || note.topicId === selectedTopic)
-                                     .filter(note => !selectedTag || note.tags.includes(selectedTag))}
-              topics={topics}
-              editingNote={editingNote}
-              setEditingNote={setEditingNote}
-              selectedTopic={selectedTopic}
-              user={user}
-            />
-          </div>
+          {isCalendarViewOpen ? (
+            <CalendarView user={user} notes={notes} />
+          ) : (
+            <div className="max-w-7xl mx-auto px-6 py-8">
+              <NoteEditor
+                notes={notes.filter(note => selectedTopic === 'all' || note.topicId === selectedTopic)
+                           .filter(note => !selectedTag || note.tags.includes(selectedTag))}
+                pinnedNotes={pinnedNotes.filter(note => selectedTopic === 'all' || note.topicId === selectedTopic)
+                                       .filter(note => !selectedTag || note.tags.includes(selectedTag))}
+                topics={topics}
+                editingNote={editingNote}
+                setEditingNote={setEditingNote}
+                selectedTopic={selectedTopic}
+                user={user}
+              />
+            </div>
+          )}
         </div>
       </div>
     </div>

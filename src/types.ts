@@ -30,6 +30,7 @@ export interface Note {
   media?: string[];
   pinned?: boolean;
   archived?: boolean;
+  eventDate?: Date | string; // Changed to allow both Date and string
 }
 
 export interface VoiceNoteMetadata {
@@ -58,12 +59,14 @@ export interface SidebarProps {
   selectedTag: string | null;
   setSelectedTag: React.Dispatch<React.SetStateAction<string | null>>;
   onVoiceRecordClick: () => void;
+  onCalendarViewClick: () => void;
   user: User;
   onSignOut: () => void;
 }
 
 export interface AuthComponentProps {
   onLogin: (user: User) => void;
+  onGoogleSignIn: () => Promise<void>;
 }
 
 export interface VoiceRecorderProps {
@@ -90,4 +93,17 @@ export interface NoteViewProps {
   onEdit: () => void;
   topic: Topic | undefined;
   user: User;
+}
+
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  start: Date;
+  end: Date;
+  noteId?: string;
+}
+
+export interface CalendarViewProps {
+  user: User;
+  notes: Note[];
 }
